@@ -1,23 +1,15 @@
 # Car Insurance API & Agente IA
 
-API de seguros de automóviles que actúa como puerta de entrada hacia un **Agente de IA** orquestado por **n8n**. El backend recibe peticiones HTTP, aplica seguridad y valida metadatos; n8n gestiona RAG, documentos y el agente.
-
-## Restricción arquitectónica crítica
-
-> **Este backend NO implementa RAG, fragmentación de documentos ni búsqueda vectorial.**  
-> Todo eso lo realiza n8n. Las únicas responsabilidades del backend son:
-> - Recibir peticiones HTTP
-> - Detectar prompt injection
-> - Validar metadatos del usuario (pólizas)
-> - Comunicarse vía WebClient con los webhooks de n8n
+API de seguros de automóviles con **Agente de IA** implementado mediante **Spring AI** + **Ollama**. Motor RAG para respuestas basadas en pólizas y documentos cargados.
 
 ## Stack tecnológico
 
 | Componente | Tecnología |
 |------------|------------|
 | Backend | Java + Spring Boot (REST API) |
-| n8n | RAG, fragmentación, vectores, agente IA, memoria |
-| Comunicación | HTTP WebClient → webhooks n8n |
+| IA / LLM | Spring AI + Ollama |
+| RAG | Spring AI (embeddings, vector store, retrieval) |
+| Procesamiento | Documentos PDF/Text fragmentados y vectorizados |
 | IDE | Cursor |
 
 ## Estructura del proyecto
@@ -27,16 +19,23 @@ carInsuranceApi/
 ├── docs/                    # Documentación
 ├── src/main/java/.../
 │   ├── api/                 # Controladores REST
+│   ├── agent/               # Agente IA (Spring AI + Ollama)
+│   ├── rag/                 # RAG: retrieval, embeddings, vector store
+│   ├── document/            # Fragmentación y vectorización de documentos
 │   ├── security/            # Detección prompt injection
-│   ├── guardrails/          # Validación metadatos (pólizas)
-│   ├── config/              # Configuración n8n
-│   ├── client/              # N8nWebhookClient (WebClient)
-│   ├── model/               # DTOs
+│   ├── guardrails/          # Validación de contexto y metadatos
+│   ├── config/              # Configuración Ollama, Spring AI, vector store
+│   ├── model/               # DTOs y entidades
 │   └── exception/           # Manejo de errores
-├── n8n/                     # RAG, documentos, vectores, agente
-├── docker/
+├── data/                    # Documentos y vector store (local)
+├── docker/                  # API + Ollama
 └── scripts/
 ```
+
+## Restricciones del agente
+
+- **Guardrails**: Solo responder sobre seguros de autos o contenido de documentos
+- **Seguridad**: Detección de prompt injection antes de enviar a Ollama
 
 ## Documentación
 

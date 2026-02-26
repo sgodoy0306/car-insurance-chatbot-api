@@ -1,0 +1,5 @@
+# No subir documentos ni vectores sensibles al repositorio
+documents/*
+!documents/.gitkeep
+vectors/*
+!vectors/.gitkeep

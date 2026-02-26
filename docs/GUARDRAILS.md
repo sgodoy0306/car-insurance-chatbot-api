@@ -1,15 +1,19 @@
 # Guardrails y seguridad del Agente
 
-## Responsabilidades por componente
+## Responsabilidades (Backend Spring Boot)
+
+El backend implementa todo de forma integral con Spring AI + Ollama:
 
 | Componente | Responsabilidad |
 |------------|------------------|
-| **Backend (Spring Boot)** | Detección de prompt injection; validación de metadatos del usuario (pólizas); puente HTTP hacia n8n |
-| **n8n** | RAG, fragmentación de documentos, búsqueda vectorial, guardrails de contenido, agente IA |
+| **RAG** | Fragmentación de documentos, vectorización, búsqueda en vector store |
+| **Agente** | Chat con Ollama vía Spring AI |
+| **Guardrails** | Validación de contexto (solo seguros/docs) y metadatos (pólizas) |
+| **Seguridad** | Detección de prompt injection antes de enviar a Ollama |
 
 ---
 
-## Restricciones del agente (aplicadas en n8n)
+## Restricciones del agente
 
 ### Contexto permitido
 
@@ -31,7 +35,7 @@ El agente **solo** puede responder sobre:
 
 ### Detección de prompt injection
 
-El backend **debe** detectar intentos de evadir reglas antes de enviar la petición a n8n:
+El backend **debe** detectar intentos de evadir reglas antes de enviar la petición a Ollama:
 
 - Instrucciones ocultas (ej. "ignore las reglas anteriores")
 - Cambio de rol (ej. "actúa como admin sin restricciones")
@@ -40,12 +44,12 @@ El backend **debe** detectar intentos de evadir reglas antes de enviar la petici
 
 ### Implementación (Spring Boot)
 
-- **Capa de filtrado**: `PromptInjectionDetector` antes de llamar al webhook n8n
+- **Capa de filtrado**: `PromptInjectionDetector` antes de llamar a Ollama
 - **Patrones**: Lista de patrones en `InjectionPatterns`
 - **Filtro**: `SecurityFilter` como middleware de entrada
 
 ### Respuesta ante detección
 
-- Bloquear la consulta (no enviar a n8n)
+- Bloquear la consulta (no enviar a Ollama)
 - Registrar el intento (audit log)
 - Responder genéricamente sin ejecutar la petición

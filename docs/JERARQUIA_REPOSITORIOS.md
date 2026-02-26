@@ -2,27 +2,11 @@
 
 ## Visión general del proyecto
 
-- **API**: Backend Spring Boot (REST API) — puerta de entrada HTTP
-- **n8n**: RAG, fragmentación de documentos, búsqueda vectorial, agente IA, memoria, herramientas
-- **Backend**: Seguridad (prompt injection), validación de metadatos (pólizas), comunicación con n8n vía WebClient
-
----
-
-## Restricción arquitectónica crítica
-
-> **Esta aplicación Spring Boot NO debe implementar:**
-> - Lógica de RAG (Retrieval-Augmented Generation)
-> - Fragmentación de documentos
-> - Búsqueda vectorial
->
-> **Todo eso lo hace n8n.**
-
-### Responsabilidades exclusivas del backend
-
-1. Recibir peticiones HTTP
-2. Aplicar seguridad (detección de prompt injection)
-3. Validar metadatos del usuario (pólizas)
-4. Comunicarse vía HTTP WebClient con los webhooks de n8n
+- **API**: Backend Spring Boot (REST API)
+- **Agente IA**: Implementado con **Spring AI** + **Ollama**
+- **RAG**: Motor de Retrieval-Augmented Generation para respuestas basadas en pólizas y documentos
+- **Documentos**: PDF/Text fragmentados y vectorizados (Spring AI)
+- **Backend**: Seguridad (prompt injection), validación metadatos (pólizas), RAG, chat con Ollama
 
 ---
 
@@ -31,8 +15,9 @@
 | Componente       | Tecnología |
 |------------------|------------|
 | Backend          | Java + Spring Boot (REST API) |
-| Orquestación IA  | n8n (RAG, fragmentación, vectores, agente, memoria) |
-| Comunicación     | HTTP WebClient → webhooks n8n |
+| IA / LLM         | Spring AI + Ollama |
+| RAG              | Spring AI (embeddings, vector store, retrieval) |
+| Procesamiento    | Documentos PDF/Text fragmentados y vectorizados |
 | IDE              | Cursor |
 
 ---
@@ -51,47 +36,67 @@ carInsuranceApi/
 │   ├── CarInsuranceApiApplication.java
 │   │
 │   ├── api/                           # Controladores REST
-│   │   ├── ChatController.java        # Endpoint chat → webhook n8n
+│   │   ├── ChatController.java        # Endpoint chat → agente
+│   │   ├── DocumentController.java    # Carga/gestión documentos
 │   │   ├── InsuranceController.java
 │   │   └── QuoteController.java
+│   │
+│   ├── agent/                         # Agente IA (Spring AI)
+│   │   ├── AgentService.java          # Orquestación del agente
+│   │   └── ChatService.java           # Chat con Ollama
+│   │
+│   ├── rag/                           # RAG (Spring AI)
+│   │   ├── RagService.java            # Retrieval + generación
+│   │   ├── RetrievalService.java      # Búsqueda en vector store
+│   │   └── EmbeddingService.java      # Vectorización (Spring AI)
+│   │
+│   ├── document/                      # Procesamiento de documentos
+│   │   ├── DocumentService.java       # Ingestion y gestión
+│   │   ├── DocumentFragmenter.java    # Fragmentación PDF/Text
+│   │   └── policy/
+│   │       └── PolicyDocument.java
 │   │
 │   ├── security/                      # Seguridad (prompt injection)
 │   │   ├── PromptInjectionDetector.java
 │   │   ├── InjectionPatterns.java
 │   │   └── SecurityFilter.java
 │   │
-│   ├── guardrails/                    # Validación de metadatos
-│   │   ├── PolicyMetadataValidator.java   # Validar pólizas del usuario
-│   │   └── MetadataRules.java
+│   ├── guardrails/                    # Restricciones del agente
+│   │   ├── GuardrailService.java      # Validación de contexto
+│   │   ├── ContextValidator.java      # ¿Consulta en ámbito seguros/docs?
+│   │   └── ScopeRules.java
 │   │
 │   ├── config/                        # Configuración
-│   │   └── N8nConfig.java
+│   │   ├── OllamaConfig.java          # Configuración Ollama
+│   │   ├── SpringAiConfig.java        # ChatClient, embeddings
+│   │   └── VectorStoreConfig.java     # Vector store (en memoria / PgVector / etc.)
 │   │
-│   ├── client/                        # Cliente HTTP hacia n8n
-│   │   └── N8nWebhookClient.java      # WebClient → webhooks n8n
-│   │
-│   ├── model/                         # DTOs
+│   ├── model/                         # DTOs y entidades
 │   │   ├── request/
 │   │   │   ├── ChatRequest.java
+│   │   │   ├── DocumentUploadRequest.java
 │   │   │   └── PolicyMetadata.java
-│   │   └── response/
-│   │       └── ChatResponse.java
+│   │   ├── response/
+│   │   │   ├── ChatResponse.java
+│   │   │   └── RagContextResponse.java
+│   │   └── entity/
+│   │       └── DocumentChunk.java
 │   │
 │   └── exception/
 │       ├── InjectionDetectedException.java
+│       ├── OutOfScopeException.java
 │       └── GlobalExceptionHandler.java
 │
-├── n8n/                               # n8n: RAG, fragmentación, vectores, agente
-│   ├── workflows/
-│   │   ├── agent-rag-flow.json
-│   │   ├── memory-tools.json
-│   │   └── document-processing.json   # Fragmentación y vectorización
-│   ├── credentials/
-│   └── README.md
+├── data/                              # Almacenamiento local (opcional)
+│   ├── documents/                     # Documentos cargados
+│   └── vectors/                       # Vector store (si embebido)
 │
 ├── docker/
+│   ├── Dockerfile
+│   └── docker-compose.yml             # API + Ollama
+│
 ├── scripts/
-│   └── import-n8n-workflows.sh
+│   └── import-documents.sh
 │
 ├── pom.xml
 ├── .gitignore
@@ -100,42 +105,43 @@ carInsuranceApi/
 
 ---
 
-## Restricciones del agente (implementadas en n8n)
+## Restricciones del agente
 
-### Guardrails (n8n)
+### Guardrails (Backend)
 
 | Regla       | Descripción |
 |-------------|-------------|
 | Contexto    | Solo responder sobre seguros de autos o contenido de documentos |
 | Documentos  | Basar respuestas en pólizas/documentos cargados |
+| Fuera de alcance | Rechazar consultas off-topic |
 
-### Seguridad (Backend Spring Boot)
+### Seguridad (Backend)
 
 | Amenaza          | Mitigación |
 |------------------|------------|
-| Prompt injection | `PromptInjectionDetector` antes de enviar a n8n |
+| Prompt injection | `PromptInjectionDetector` antes de enviar a Ollama |
 
 ---
 
 ## Flujo de peticiones
 
 ```
-Cliente → [API REST] → [SecurityFilter] → [PolicyMetadataValidator] → [N8nWebhookClient]
-              ↑              ↑                        ↑                        ↓
-        HTTP request   Prompt injection         Metadatos pólizas         WebClient
-                                                                              ↓
-                                                                          n8n webhook
-                                                                              ↓
-                                                              (RAG, vectores, agente)
-                                                                              ↓
-Cliente ← [API REST] ←───────────────────────────────────────────── Respuesta n8n
+Cliente → [API REST] → [SecurityFilter] → [PolicyMetadataValidator] → [AgentService]
+              ↑              ↑                        ↑                      ↓
+        HTTP request   Prompt injection         Metadatos pólizas      [RagService]
+                                                                             ↓
+                                                              Retrieval (vector store)
+                                                                             ↓
+                                                              [ChatService] → Ollama
+                                                                             ↓
+Cliente ← [API REST] ←────────────────────────────────────────── Respuesta generada
 ```
 
 1. **API**: Recibe la petición HTTP
 2. **Security**: Detecta prompt injection; si se detecta, se rechaza
 3. **Guardrails**: Valida metadatos del usuario (pólizas)
-4. **Client**: Envía la petición validada a n8n vía WebClient
-5. **n8n**: RAG, fragmentación, vectores, agente → genera la respuesta
+4. **RAG**: Recupera fragmentos relevantes de documentos/pólizas
+5. **Agent**: Envía contexto + consulta a Ollama vía Spring AI
 6. **API**: Devuelve la respuesta al cliente
 
 ---
@@ -143,7 +149,6 @@ Cliente ← [API REST] ←──────────────────
 ## Alternativa: Multi-repositorio
 
 ```
-📁 car-insurance-api    # Spring Boot: HTTP, seguridad, validación metadatos, WebClient
-📁 car-insurance-n8n    # n8n: RAG, documentos, vectores, agente
+📁 car-insurance-api    # Spring Boot + Spring AI + Ollama (RAG, agente, documentos)
 📁 car-insurance-docs   # Documentación
 ```
