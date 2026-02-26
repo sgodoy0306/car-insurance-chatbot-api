@@ -1,4 +1,4 @@
-# No subir documentos ni vectores sensibles al repositorio
+# Do not commit sensitive documents or vectors to the repository
 documents/*
 !documents/.gitkeep
 vectors/*

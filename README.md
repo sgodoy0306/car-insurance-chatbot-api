@@ -1,43 +1,43 @@
-# Car Insurance API & Agente IA
+# Car Insurance API & AI Agent
 
-API de seguros de automóviles con **Agente de IA** implementado mediante **Spring AI** + **Ollama**. Motor RAG para respuestas basadas en pólizas y documentos cargados.
+Car insurance API with an **AI Agent** implemented using **Spring AI** + **Ollama**. RAG engine for responses based on loaded policies and documents.
 
-## Stack tecnológico
+## Tech stack
 
-| Componente | Tecnología |
-|------------|------------|
-| Backend | Java + Spring Boot (REST API) |
-| IA / LLM | Spring AI + Ollama |
-| RAG | Spring AI (embeddings, vector store, retrieval) |
-| Procesamiento | Documentos PDF/Text fragmentados y vectorizados |
-| IDE | Cursor |
+| Component   | Technology |
+|-------------|------------|
+| Backend     | Java + Spring Boot (REST API) |
+| AI / LLM    | Spring AI + Ollama |
+| RAG         | Spring AI (embeddings, vector store, retrieval) |
+| Processing  | PDF/Text documents fragmented and vectorized |
+| IDE         | Cursor |
 
-## Estructura del proyecto
+## Project structure
 
 ```
 carInsuranceApi/
-├── docs/                    # Documentación
+├── docs/                    # Documentation
 ├── src/main/java/.../
-│   ├── api/                 # Controladores REST
-│   ├── agent/               # Agente IA (Spring AI + Ollama)
+│   ├── api/                 # REST Controllers
+│   ├── agent/               # AI Agent (Spring AI + Ollama)
 │   ├── rag/                 # RAG: retrieval, embeddings, vector store
-│   ├── document/            # Fragmentación y vectorización de documentos
-│   ├── security/            # Detección prompt injection
-│   ├── guardrails/          # Validación de contexto y metadatos
-│   ├── config/              # Configuración Ollama, Spring AI, vector store
-│   ├── model/               # DTOs y entidades
-│   └── exception/           # Manejo de errores
-├── data/                    # Documentos y vector store (local)
+│   ├── document/            # Document fragmentation and vectorization
+│   ├── security/            # Prompt injection detection
+│   ├── guardrails/          # Context and metadata validation
+│   ├── config/              # Ollama, Spring AI, vector store configuration
+│   ├── model/               # DTOs and entities
+│   └── exception/           # Error handling
+├── data/                    # Documents and vector store (local)
 ├── docker/                  # API + Ollama
 └── scripts/
 ```
 
-## Restricciones del agente
+## Agent restrictions
 
-- **Guardrails**: Solo responder sobre seguros de autos o contenido de documentos
-- **Seguridad**: Detección de prompt injection antes de enviar a Ollama
+- **Guardrails**: Only respond about car insurance or document content
+- **Security**: Prompt injection detection before sending to Ollama
 
-## Documentación
+## Documentation
 
-- [Jerarquía de repositorios](docs/JERARQUIA_REPOSITORIOS.md)
-- [Guardrails y seguridad](docs/GUARDRAILS.md)
+- [Repository hierarchy](docs/REPOSITORY_HIERARCHY.md)
+- [Guardrails and security](docs/GUARDRAILS.md)
